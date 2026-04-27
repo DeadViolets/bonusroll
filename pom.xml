@@ -51,6 +51,13 @@
             <version>${jersey.version}</version>
         </dependency>
 
+        <!-- Jackson databind — used directly for fetching/parsing raidbots JSON -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.18.3</version>
+        </dependency>
+
         <!-- Jte template engine -->
         <dependency>
             <groupId>gg.jte</groupId>

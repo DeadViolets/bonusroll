@@ -18,7 +18,17 @@ public class Main {
         var context = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
         context.setContextPath("/");
 
-        // Jersey servlet — serves all requests through JAX-RS
+        // Static assets — served from the /static directory on the classpath.
+        // DefaultServlet requires a base resource; we point it at the packaged
+        // "static" folder so it works both from an exploded build and a fat JAR.
+        var staticHolder = new ServletHolder("default", DefaultServlet.class);
+        staticHolder.setInitParameter("resourceBase",
+                Main.class.getResource("/static").toExternalForm());
+        staticHolder.setInitParameter("dirAllowed", "false");
+        staticHolder.setInitParameter("pathInfoOnly", "true");
+        context.addServlet(staticHolder, "/static/*");
+
+        // Jersey servlet — serves all other requests through JAX-RS
         var jerseyHolder = new ServletHolder(new ServletContainer(new BonusRollApplication()));
         jerseyHolder.setInitOrder(1);
         context.addServlet(jerseyHolder, "/*");
