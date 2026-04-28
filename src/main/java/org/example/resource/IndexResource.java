@@ -8,7 +8,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.example.model.IndexModel;
+import java.util.Map;
 
 @Path("/")
 public class IndexResource {
@@ -22,9 +22,9 @@ public class IndexResource {
 
     @GET
     @Produces(MediaType.TEXT_HTML)
-    public Response index() {
+    public String index() {
         var output = new StringOutput();
-        templateEngine.render("index.jte", new IndexModel("BonusRoll"), output);
-        return Response.ok(output.toString()).build();
+        templateEngine.render("index.jte", Map.of(), output);
+        return output.toString();
     }
 }

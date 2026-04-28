@@ -32,22 +32,26 @@ public record RaidbotsReport(Sim sim, Simbot simbot) {
     public record Simbot(Meta meta) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Meta(java.util.List<ItemLibraryEntry> itemLibrary) {}
+    public record Meta(
+            java.util.List<ItemLibraryEntry> itemLibrary,
+            java.util.List<InstanceLibraryEntry> instanceLibrary
+    ) {}
+
+    /**
+     * One entry in simbot.meta.instanceLibrary.
+     * Used to resolve a dungeon instanceId to a human-readable name.
+     * Special IDs: -1 = M+ chest pool, -32 = Normal dungeon pool.
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record InstanceLibraryEntry(int id, String name) {}
 
     /**
      * One entry in simbot.meta.itemLibrary.
-     *
-     * <p>The {@code difficulty} field is polymorphic: a plain string ({@code "raid-mythic"})
-     * for raid items, or a JSON object ({@code {"id":"dungeon-mythic-weekly10",...}}) for
-     * dungeon items. The custom deserializer {@link DifficultyDeserializer} normalises both
-     * to a plain string.
      */
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record ItemLibraryEntry(
             int id,
             String name,
-            @com.fasterxml.jackson.databind.annotation.JsonDeserialize(
-                    using = DifficultyDeserializer.class)
             String difficulty,
             Encounter encounter,
             Instance instance,

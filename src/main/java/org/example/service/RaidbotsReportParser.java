@@ -18,6 +18,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Fetches and parses a single raidbots data.json report into a {@link ReportResult}.
@@ -61,13 +62,22 @@ public final class RaidbotsReportParser {
     static ReportResult parse(RaidbotsReport report) {
         double baseMean = report.sim().statistics().raid_dps().mean();
 
+        // Build instanceId → dungeon name lookup from instanceLibrary
+        var instanceNameById = new HashMap<Integer, String>();
+        var instanceLibrary = report.simbot().meta().instanceLibrary();
+        if (instanceLibrary != null) {
+            for (var instance : instanceLibrary) {
+                instanceNameById.put(instance.id(), instance.name());
+            }
+        }
+
         // Build lookup maps from itemLibrary: id → name, id → source
         var nameById   = new HashMap<Integer, String>();
         var sourceById = new HashMap<Integer, ItemSource>();
 
         for (ItemLibraryEntry entry : report.simbot().meta().itemLibrary()) {
             nameById.putIfAbsent(entry.id(), entry.name());
-            sourceById.putIfAbsent(entry.id(), extractSource(entry));
+            sourceById.putIfAbsent(entry.id(), extractSource(entry, instanceNameById));
         }
 
         // Map each profileset result to an AugmentedItem
@@ -111,7 +121,7 @@ public final class RaidbotsReportParser {
         static final ItemSource UNKNOWN = new ItemSource("Unknown", SourceType.RAID_BOSS);
     }
 
-    private static ItemSource extractSource(ItemLibraryEntry entry) {
+    private static ItemSource extractSource(ItemLibraryEntry entry, Map<Integer, String> instanceNameById) {
         String difficulty = entry.difficulty();
         if (difficulty == null) return ItemSource.UNKNOWN;
 
@@ -129,10 +139,11 @@ public final class RaidbotsReportParser {
             if (entry.sources() != null) {
                 for (var src : entry.sources()) {
                     if (src.instanceId() >= 0) {
-                        if (entry.instance() != null) {
-                            return new ItemSource(entry.instance().name(), SourceType.DUNGEON);
-                        }
-                        return new ItemSource("Dungeon (instance %d)".formatted(src.instanceId()), SourceType.DUNGEON);
+                        String dungeonName = instanceNameById.getOrDefault(
+                                src.instanceId(),
+                                "Dungeon (instance %d)".formatted(src.instanceId())
+                        );
+                        return new ItemSource(dungeonName, SourceType.DUNGEON);
                     }
                 }
             }
