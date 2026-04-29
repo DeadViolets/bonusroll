@@ -19,8 +19,12 @@
                     <td>${String.format("%.0f", row.weight())}</td>
                     <td>
                         <div class="items-row">
-                            @for(Double dps : row.items())
-                                <p>${String.format("%.0f", dps)}</p>
+                            @for(var item : row.items())
+                                <div>
+                                    <p>${item.name()}</p>
+                                    <p>${item.id()}</p>
+                                    <p>${String.format("%.0f", item.dps())}</p>
+                                </div>
                             @endfor
                         </div>
                     </td>

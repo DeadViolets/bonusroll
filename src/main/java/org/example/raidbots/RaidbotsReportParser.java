@@ -3,7 +3,6 @@ package org.example.raidbots;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -47,7 +46,8 @@ public final class RaidbotsReportParser {
             return Optional.empty();
         }
         String reportId = matcher.group(1);
-        return Optional.of(URI.create("https://raidbots.com/reports/%s/data.json".formatted(reportId)));
+        return Optional.of(
+                URI.create("https://raidbots.com/reports/%s/data.json".formatted(reportId)));
     }
 
     static HttpRequest buildDefaultRequest(URI uri) {

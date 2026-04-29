@@ -1,7 +1,6 @@
 package org.example.raidbots;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,22 +12,41 @@ public record RaidbotsReport(Sim sim, Simbot simbot) {
 
     public AggregatedReport aggregate() {
         double baseDps = sim.statistics().raid_dps().mean();
-        Map<Integer, List<AggregatedReport.ItemInfo>> encounterItems = new HashMap<>();
+        Map<Integer, Map<Integer, AggregatedReport.ItemInfo>> encounterItems = new HashMap<>();
 
         for (var result : sim.profilesets().normalizedResults(baseDps)) {
             int realId = result.realId();
+            AggregatedReport.ItemInfo toAdd =
+                    new AggregatedReport.ItemInfo(
+                            simbot.meta.getItemName(realId), realId, result.mean);
             encounterItems
-                    .computeIfAbsent(
-                            simbot.meta.getEncounterId(realId), k -> new ArrayList<>())
-                    .add(new AggregatedReport.ItemInfo(, result.realId(), result.mean));
+                    // TODO: There can be multiple encounter ids
+                    .computeIfAbsent(simbot.meta.getEncounterId(realId), k -> new HashMap<>())
+                    .compute(
+                            realId,
+                            (k, v) -> v == null ? toAdd : (v.dps() > toAdd.dps() ? v : toAdd));
         }
+
+        /*
+        General algorithm:
+        Take all items from droptimizerItems and assign an initial value of 0
+        Go through sim results and update dps values of items. Make sure to check for multiple encounters on some items
+        Ensure that either only catalyst or non-catalyst version of item exists in encounter
+        Ensure that items that can go in multiple slots, i.e. trinkets / rings only count once
+         */
+
+        // TODO: Handle un-simmed items (should still count in weight)
+
+        // TODO: Combine "normal" and catalyst items
+
+        // TODO: Allow custom overrides
 
         Map<String, List<AggregatedReport.ItemInfo>> namedEncounters =
                 encounterItems.entrySet().stream()
                         .collect(
                                 Collectors.toMap(
                                         e -> simbot.meta.getEncounterName(e.getKey()),
-                                        Map.Entry::getValue));
+                                        e -> e.getValue().values().stream().toList()));
 
         return new AggregatedReport(namedEncounters);
     }
@@ -106,6 +124,10 @@ public record RaidbotsReport(Sim sim, Simbot simbot) {
                         .findFirst()
                         .get()
                         .name;
+            }
+
+            public String getItemName(int itemId) {
+                return itemLibrary.stream().filter(i -> i.id == itemId).findFirst().get().name;
             }
 
             /** One entry in simbot.meta.itemLibrary. */
