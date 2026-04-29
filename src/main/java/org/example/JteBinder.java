@@ -4,14 +4,12 @@ import gg.jte.CodeResolver;
 import gg.jte.ContentType;
 import gg.jte.TemplateEngine;
 import gg.jte.resolve.DirectoryCodeResolver;
+import java.nio.file.Path;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 
-import java.nio.file.Path;
-
 /**
- * HK2 binder that registers the Jte TemplateEngine as a singleton.
- * In development mode templates are loaded from disk for hot-reload;
- * in production mode precompiled classes are used.
+ * HK2 binder that registers the Jte TemplateEngine as a singleton. In development mode templates
+ * are loaded from disk for hot-reload; in production mode precompiled classes are used.
  */
 public class JteBinder extends AbstractBinder {
 

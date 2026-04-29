@@ -1,5 +1,6 @@
 package org.example;
 
+import java.nio.file.Path;
 import org.eclipse.jetty.ee10.servlet.DefaultServlet;
 import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
 import org.eclipse.jetty.ee10.servlet.ServletHolder;
@@ -22,8 +23,11 @@ public class Main {
         // DefaultServlet requires a base resource; we point it at the packaged
         // "static" folder so it works both from an exploded build and a fat JAR.
         var staticHolder = new ServletHolder("default", DefaultServlet.class);
-        staticHolder.setInitParameter("resourceBase",
-                Main.class.getResource("/static").toExternalForm());
+        staticHolder.setInitParameter(
+                "resourceBase",
+                "dev".equalsIgnoreCase(System.getProperty("app.env", "dev"))
+                        ? Path.of("src/main/resources/static").toAbsolutePath().toString()
+                        : Main.class.getResource("/static").toExternalForm());
         staticHolder.setInitParameter("dirAllowed", "false");
         staticHolder.setInitParameter("pathInfoOnly", "true");
         context.addServlet(staticHolder, "/static/*");
@@ -53,7 +57,9 @@ public class Main {
         if (envPort != null) {
             try {
                 return Integer.parseInt(envPort);
-            } catch (NumberFormatException ignored) { /* fall through */ }
+            } catch (NumberFormatException ignored) {
+                /* fall through */
+            }
         }
         return DEFAULT_PORT;
     }

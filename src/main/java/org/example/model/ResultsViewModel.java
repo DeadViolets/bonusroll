@@ -1,21 +1,34 @@
 package org.example.model;
 
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import org.example.raidbots.AggregatedReport;
 
-/**
- * View model passed to the results Jte fragment.
- *
- * @param reports  One entry per submitted URL (in submission order).
- *                 Contains either a parsed result or an error message.
- */
-public record ResultsViewModel(List<ReportEntry> reports) {
+public record ResultsViewModel(List<WeightedRow> reportEntries) {
 
-    public record ReportEntry(
-            String label,
-            String url,
-            ReportResult result,   // null when error is set
-            String error           // null when result is set
-    ) {
-        public boolean hasError() { return error != null; }
+    public record WeightedRow(String name, Double weight, List<Double> items) {}
+
+    public static ResultsViewModel fromAggregatedReports(List<AggregatedReport> aggregatedReports) {
+        Map<String, List<Double>> reportEntries = new HashMap<>();
+        for (AggregatedReport aggregatedReport : aggregatedReports) {
+            reportEntries.putAll(aggregatedReport.encounters());
+        }
+    List<WeightedRow> rows =
+        reportEntries.entrySet().stream()
+            .map(
+                e -> {
+                  double weight =
+                      e.getValue().stream()
+                          .mapToDouble(Double::doubleValue)
+                          .average()
+                          .getAsDouble();
+                  return new WeightedRow(e.getKey(), weight, e.getValue());
+                })
+            .sorted(Comparator.comparing(WeightedRow::weight).reversed())
+            .toList();
+
+        return new ResultsViewModel(rows);
     }
 }
