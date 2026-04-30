@@ -11,7 +11,8 @@ public record ResultsViewModel(List<WeightedRow> reportEntries) {
     public record WeightedRow(String name, Double weight, List<AggregatedReport.ItemInfo> items) {}
 
     public static ResultsViewModel fromAggregatedReports(List<AggregatedReport> aggregatedReports) {
-        Map<String, List<AggregatedReport.ItemInfo>> reportEntries = new HashMap<>();
+        Map<AggregatedReport.EncounterInfo, List<AggregatedReport.ItemInfo>> reportEntries =
+                new HashMap<>();
         for (AggregatedReport aggregatedReport : aggregatedReports) {
             reportEntries.putAll(aggregatedReport.encounters());
         }
@@ -24,7 +25,10 @@ public record ResultsViewModel(List<WeightedRow> reportEntries) {
                                                     .mapToDouble(AggregatedReport.ItemInfo::dps)
                                                     .average()
                                                     .getAsDouble();
-                                    return new WeightedRow(e.getKey(), weight, e.getValue());
+                                    if (e.getKey().type() == AggregatedReport.EncounterType.RAID) {
+                                        weight *= 0.5;
+                                    }
+                                    return new WeightedRow(e.getKey().name(), weight, e.getValue());
                                 })
                         .sorted(Comparator.comparing(WeightedRow::weight).reversed())
                         .toList();

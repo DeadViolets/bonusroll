@@ -1,10 +1,12 @@
 package org.example.raidbots;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 /** Root of a raidbots data.json response. */
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -12,43 +14,109 @@ public record RaidbotsReport(Sim sim, Simbot simbot) {
 
     public AggregatedReport aggregate() {
         double baseDps = sim.statistics().raid_dps().mean();
-        Map<Integer, Map<Integer, AggregatedReport.ItemInfo>> encounterItems = new HashMap<>();
-
-        for (var result : sim.profilesets().normalizedResults(baseDps)) {
-            int realId = result.realId();
-            AggregatedReport.ItemInfo toAdd =
-                    new AggregatedReport.ItemInfo(
-                            simbot.meta.getItemName(realId), realId, result.mean);
-            encounterItems
-                    // TODO: There can be multiple encounter ids
-                    .computeIfAbsent(simbot.meta.getEncounterId(realId), k -> new HashMap<>())
-                    .compute(
-                            realId,
-                            (k, v) -> v == null ? toAdd : (v.dps() > toAdd.dps() ? v : toAdd));
-        }
+        Map<Integer, AggregatedReport.ItemInfo> items = new HashMap<>();
 
         /*
         General algorithm:
-        Take all items from droptimizerItems and assign an initial value of 0
-        Go through sim results and update dps values of items. Make sure to check for multiple encounters on some items
-        Ensure that either only catalyst or non-catalyst version of item exists in encounter
-        Ensure that items that can go in multiple slots, i.e. trinkets / rings only count once
+        1. Take all items from droptimizerItems and assign an initial value of 0
+        2. Go through sim results and update dps values of items. Make sure to check for multiple encounters on items
+        3. Ensure that either only catalyst or non-catalyst version of item exists in encounter
          */
 
-        // TODO: Handle un-simmed items (should still count in weight)
+        // Step 1: Add all droptimizer items
+        for (var outerItem : simbot.meta.rawFormData.droptimizerItems) {
+            var item = outerItem.item;
+            final AggregatedReport.EncounterInfo encounterSource;
+            if (item.encounter != null) {
+                encounterSource =
+                        new AggregatedReport.EncounterInfo(
+                                item.encounter.name, AggregatedReport.EncounterType.RAID);
+            } else {
+                // Dungeon report
+                int encounterId =
+                        item.sources.stream()
+                                .filter(s -> s.instanceId == -1)
+                                .findFirst()
+                                .get()
+                                .encounterId;
+                String encounterName =
+                        item.instance.encounters.stream()
+                                .filter(e -> e.id == encounterId)
+                                .findFirst()
+                                .get()
+                                .name;
+                encounterSource =
+                        new AggregatedReport.EncounterInfo(
+                                encounterName, AggregatedReport.EncounterType.DUNGEON);
+            }
+            items.compute(
+                    item.id,
+                    (k, current) -> {
+                        if (current == null) {
+                            Integer sourceId = null;
+                            if (item.sourceItem != null) {
+                                sourceId = item.sourceItem.id;
+                            }
+                            return new AggregatedReport.ItemInfo(
+                                    item.name,
+                                    item.id,
+                                    sourceId,
+                                    new HashSet<>(Set.of(encounterSource)),
+                                    0);
+                        } else {
+                            current.encounterSources().add(encounterSource);
+                            return current;
+                        }
+                    });
+        }
 
-        // TODO: Combine "normal" and catalyst items
+        // Step 2: Update with sim results
+        for (var result : sim.profilesets().normalizedResults(baseDps)) {
+            int realId = result.realId();
+            items.computeIfPresent(
+                    realId,
+                    (k, v) ->
+                            (v.dps() > result.mean
+                                    ? v
+                                    : new AggregatedReport.ItemInfo(
+                                            v.name(),
+                                            v.id(),
+                                            v.sourceItemId(),
+                                            v.encounterSources(),
+                                            result.mean)));
+        }
+
+        // Step 3: Combine Catalyst / non-catalyst
+        // Step 3a: Group items by encounter
+        Map<AggregatedReport.EncounterInfo, List<AggregatedReport.ItemInfo>> encounterItems =
+                new HashMap<>();
+        for (var item : items.values()) {
+            for (AggregatedReport.EncounterInfo encounterInfo : item.encounterSources()) {
+                encounterItems.computeIfAbsent(encounterInfo, k -> new ArrayList<>()).add(item);
+            }
+        }
+        // Step 3b: Combine items
+        for (List<AggregatedReport.ItemInfo> entry : encounterItems.values()) {
+            Set<Integer> toRemove = new HashSet<>();
+            for (var item : entry) {
+                if (item.sourceItemId() != null) {
+                    entry.stream()
+                            .filter(i -> i.id() == item.sourceItemId())
+                            .findFirst()
+                            .ifPresent(
+                                    source ->
+                                            toRemove.add(
+                                                    item.dps() > source.dps()
+                                                            ? source.id()
+                                                            : item.id()));
+                }
+            }
+            entry.removeIf(i -> toRemove.contains(i.id()));
+        }
 
         // TODO: Allow custom overrides
 
-        Map<String, List<AggregatedReport.ItemInfo>> namedEncounters =
-                encounterItems.entrySet().stream()
-                        .collect(
-                                Collectors.toMap(
-                                        e -> simbot.meta.getEncounterName(e.getKey()),
-                                        e -> e.getValue().values().stream().toList()));
-
-        return new AggregatedReport(namedEncounters);
+        return new AggregatedReport(encounterItems);
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -90,64 +158,37 @@ public record RaidbotsReport(Sim sim, Simbot simbot) {
     public record Simbot(Meta meta) {
 
         @JsonIgnoreProperties(ignoreUnknown = true)
-        public record Meta(
-                List<ItemLibraryEntry> itemLibrary, List<InstanceLibraryEntry> instanceLibrary) {
+        public record Meta(RawFormData rawFormData) {
 
-            public int getEncounterId(int itemId) {
-                return itemLibrary.stream()
-                        .filter(item -> item.id() == itemId)
-                        .findFirst()
-                        .map(
-                                itemEntry -> {
-                                    if (itemEntry.difficulty.contains("dungeon")) {
-                                        ItemLibraryEntry.Source firstEntry =
-                                                itemEntry.sources.getFirst();
-                                        return firstEntry.instanceId < 0
-                                                ? firstEntry.encounterId
-                                                : firstEntry.instanceId;
-                                    } else {
-                                        return itemEntry.sources.getFirst().encounterId;
-                                    }
-                                })
-                        .get();
-            }
+            @JsonIgnoreProperties(ignoreUnknown = true)
+            public record RawFormData(List<DroptimizerItem> droptimizerItems) {
 
-            public String getEncounterName(int encounterId) {
-                final InstanceLibraryEntry instance;
-                if (instanceLibrary.size() == 1) {
-                    instance = instanceLibrary.getFirst();
-                } else {
-                    instance = instanceLibrary.stream().filter(i -> i.id == -1).findFirst().get();
+                @JsonIgnoreProperties(ignoreUnknown = true)
+                public record DroptimizerItem(DroptimizerInnerItem item) {
+
+                    @JsonIgnoreProperties(ignoreUnknown = true)
+                    public record DroptimizerInnerItem(
+                            int id,
+                            String name,
+                            String icon,
+                            List<Source> sources,
+                            SourceItem sourceItem,
+                            Instance instance,
+                            Encounter encounter) {
+
+                        @JsonIgnoreProperties(ignoreUnknown = true)
+                        public record Source(int instanceId, int encounterId) {}
+
+                        @JsonIgnoreProperties(ignoreUnknown = true)
+                        public record Instance(int id, List<Encounter> encounters) {}
+
+                        @JsonIgnoreProperties(ignoreUnknown = true)
+                        public record Encounter(int id, String name) {}
+
+                        @JsonIgnoreProperties(ignoreUnknown = true)
+                        public record SourceItem(int id, String name, String icon) {}
+                    }
                 }
-                return instance.encounters.stream()
-                        .filter(e -> e.id == encounterId)
-                        .findFirst()
-                        .get()
-                        .name;
-            }
-
-            public String getItemName(int itemId) {
-                return itemLibrary.stream().filter(i -> i.id == itemId).findFirst().get().name;
-            }
-
-            /** One entry in simbot.meta.itemLibrary. */
-            @JsonIgnoreProperties(ignoreUnknown = true)
-            public record ItemLibraryEntry(
-                    int id, String name, String difficulty, List<Source> sources) {
-
-                @JsonIgnoreProperties(ignoreUnknown = true)
-                public record Source(int instanceId, int encounterId) {}
-            }
-
-            /**
-             * One entry in simbot.meta.instanceLibrary. Used to resolve a dungeon instanceId to a
-             * human-readable name. Special IDs: -1 = M+ chest pool, -32 = Normal dungeon pool.
-             */
-            @JsonIgnoreProperties(ignoreUnknown = true)
-            public record InstanceLibraryEntry(int id, List<EncounterEntry> encounters) {
-
-                @JsonIgnoreProperties(ignoreUnknown = true)
-                public record EncounterEntry(int id, String name) {}
             }
         }
     }
