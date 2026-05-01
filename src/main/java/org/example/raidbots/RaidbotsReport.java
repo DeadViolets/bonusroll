@@ -58,6 +58,7 @@ public record RaidbotsReport(Sim sim, Simbot simbot) {
                                 sourceId = item.sourceItem.id;
                             }
                             return new AggregatedReport.ItemInfo(
+                                    item.icon,
                                     item.name,
                                     item.id,
                                     sourceId,
@@ -79,6 +80,7 @@ public record RaidbotsReport(Sim sim, Simbot simbot) {
                             (v.dps() > result.mean
                                     ? v
                                     : new AggregatedReport.ItemInfo(
+                                            v.iconName(),
                                             v.name(),
                                             v.id(),
                                             v.sourceItemId(),

@@ -20,9 +20,11 @@
                     <td>
                         <div class="items-row">
                             @for(var item : row.items())
-                                <div>
-                                    <p>${item.name()}</p>
-                                    <p>${item.id()}</p>
+                                <div class="item">
+                                    <span class="icon-container">
+                                        <img class="icon" src="/static/icons/${item.iconName()}.png" alt="${item.name()}">
+                                        <span class="icon-tooltip">${item.name()} ${item.id()}</span>
+                                    </span>
                                     <p>${String.format("%.0f", item.dps())}</p>
                                 </div>
                             @endfor

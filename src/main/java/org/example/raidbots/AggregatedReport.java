@@ -14,6 +14,7 @@ public record AggregatedReport(Map<EncounterInfo, List<ItemInfo>> encounters) {
     public record EncounterInfo(String name, EncounterType type) {}
 
     public record ItemInfo(
+            String iconName,
             String name,
             int id,
             Integer sourceItemId,

@@ -87,3 +87,25 @@ button:disabled {
 th, td {
     padding: 0 16px;
 }
+
+.item {
+    display: flex;
+    gap: 16px;
+}
+
+.icon-tooltip {
+    visibility: hidden;
+    position: absolute;
+    background: black;
+    color: white;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+.icon-container:hover .icon-tooltip {
+    visibility: visible;
+}
+
+.icon {
+    width: 64px;
+}
