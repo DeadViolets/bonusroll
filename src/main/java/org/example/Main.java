@@ -5,6 +5,7 @@ import org.eclipse.jetty.ee10.servlet.DefaultServlet;
 import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
 import org.eclipse.jetty.ee10.servlet.ServletHolder;
 import org.eclipse.jetty.server.Server;
+import org.flywaydb.core.Flyway;
 import org.glassfish.jersey.servlet.ServletContainer;
 
 public class Main {
@@ -12,6 +13,14 @@ public class Main {
     private static final int DEFAULT_PORT = 8080;
 
     public static void main(String[] args) throws Exception {
+        Flyway flyway = Flyway.configure()
+                .dataSource(
+                        "jdbc:postgresql://localhost:5432/bonusroll",
+                        "postgres",
+                        "postgres"
+                ).load();
+        flyway.migrate();
+
         int port = resolvePort(args);
 
         var server = new Server(port);

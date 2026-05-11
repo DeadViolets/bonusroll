@@ -22,7 +22,7 @@
                             @for(var item : row.items())
                                 <div class="item">
                                     <span class="icon-container">
-                                        <img class="icon" src="/static/icons/${item.iconName()}.png" alt="${item.name()}">
+                                        <img class="icon" src="https://wow.zamimg.com/images/wow/icons/large/${item.iconName()}.jpg" alt="${item.name()}">
                                         <span class="icon-tooltip">${item.name()} ${item.id()}</span>
                                     </span>
                                     <p>${String.format("%.0f", item.dps())}</p>
