@@ -13,12 +13,13 @@ public class Main {
     private static final int DEFAULT_PORT = 8080;
 
     public static void main(String[] args) throws Exception {
-        Flyway flyway = Flyway.configure()
-                .dataSource(
-                        "jdbc:postgresql://localhost:5432/bonusroll",
-                        "postgres",
-                        "postgres"
-                ).load();
+        Flyway flyway =
+                Flyway.configure()
+                        .dataSource(
+                                "jdbc:postgresql://localhost:5432/bonusroll",
+                                "postgres",
+                                "postgres")
+                        .load();
         flyway.migrate();
 
         int port = resolvePort(args);
