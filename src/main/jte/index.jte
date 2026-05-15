@@ -19,53 +19,74 @@
             hx-target="#results"
             hx-swap="innerHTML">
 
-            <fieldset>
-                <legend>Raidbots Report URLs</legend>
+            <div class="input-container">
+                <fieldset>
+                    <legend>Raidbots Report URLs</legend>
 
-                <div class="field">
-                    <label for="voidspire">Voidspire</label>
-                    <input
-                        id="voidspire"
-                        name="voidspire"
-                        type="url"
-                        placeholder="https://www.raidbots.com/simbot/report/…"
-                        autocomplete="off"
-                        spellcheck="false"/>
-                </div>
+                    <div class="field">
+                        <label for="voidspire">Voidspire</label>
+                        <input
+                                id="voidspire"
+                                name="voidspire"
+                                type="url"
+                                placeholder="https://www.raidbots.com/simbot/report/…"
+                                autocomplete="off"
+                                spellcheck="false"/>
+                    </div>
 
-                <div class="field">
-                    <label for="dreamrift">Dreamrift</label>
+                    <div class="field">
+                        <label for="dreamrift">Dreamrift</label>
+                        <input
+                                id="dreamrift"
+                                name="dreamrift"
+                                type="url"
+                                placeholder="https://www.raidbots.com/simbot/report/…"
+                                autocomplete="off"
+                                spellcheck="false"/>
+                    </div>
+
+                    <div class="field">
+                        <label for="march">March On Quel'Danas</label>
+                        <input
+                                id="march"
+                                name="march"
+                                type="url"
+                                placeholder="https://www.raidbots.com/simbot/report/…"
+                                autocomplete="off"
+                                spellcheck="false"/>
+                    </div>
+
+                    <div class="field">
+                        <label for="dungeon">Dungeons</label>
+                        <input
+                                id="dungeon"
+                                name="dungeon"
+                                type="url"
+                                placeholder="https://www.raidbots.com/simbot/report/…"
+                                autocomplete="off"
+                                spellcheck="false"/>
+                    </div>
+                </fieldset>
+
+                <div class="search">
                     <input
-                            id="dreamrift"
-                            name="dreamrift"
-                            type="url"
-                            placeholder="https://www.raidbots.com/simbot/report/…"
+                            type="text"
+                            name="query"
+                            placeholder="Search items..."
+                            hx-get="/items/search"
+                            hx-trigger="keyup changed delay:200ms"
+                            hx-target="#search-results"
+                            hx-swap="innerHTML"
                             autocomplete="off"
-                            spellcheck="false"/>
+                    >
+                    <div id="search-results"></div>
+                    <div>
+                        <h4>Selected items</h4>
+                        <ul id="selected-items"></ul>
+                    </div>
+                    <div id="selected-inputs"></div>
                 </div>
-
-                <div class="field">
-                    <label for="march">March On Quel'Danas</label>
-                    <input
-                            id="march"
-                            name="march"
-                            type="url"
-                            placeholder="https://www.raidbots.com/simbot/report/…"
-                            autocomplete="off"
-                            spellcheck="false"/>
-                </div>
-
-                <div class="field">
-                    <label for="dungeon">Dungeons</label>
-                    <input
-                        id="dungeon"
-                        name="dungeon"
-                        type="url"
-                        placeholder="https://www.raidbots.com/simbot/report/…"
-                        autocomplete="off"
-                        spellcheck="false"/>
-                </div>
-            </fieldset>
+            </div>
 
             <div class="form-actions">
                 <button type="submit">Compute bonus rolls</button>
